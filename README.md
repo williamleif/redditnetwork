@@ -28,4 +28,4 @@ See the spacy docs for more info.
 ### Extracting multilayer networks from the data
 
 The `network_extractor.py` file contains code for extracting network data corresponding to one week of activity in a specific subreddit.
-See the `network_examply.ipynb` notebook for an example an more information.
+See the `network_example.ipynb` notebook for an example an more information.
