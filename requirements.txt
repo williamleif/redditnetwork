@@ -1,0 +1,3 @@
+isoweek
+spacy>=1.2
+numpy
