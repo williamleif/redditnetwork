@@ -6,6 +6,11 @@ statsmodels
 .git_old
 scikit-learn
 *mallet*
+venv
+*egg-info*
+build
+dist
+.ipynb_checkpoints
 
 *.class
 

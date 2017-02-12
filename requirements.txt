@@ -1,6 +1,0 @@
-isoweek
-spacy==1.2.0
-numpy
-networkx
-nltk
-pandas
