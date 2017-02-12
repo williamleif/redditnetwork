@@ -4,7 +4,18 @@ Code for managing Reddit dataset (assuming user has access to the Stanford Reddi
 
 ## Installing / set-up
 
-Run `pip install -r requirements.txt` to install the necessary dependencies and then you are good to go! 
+The code requires that version 1.2.0 of spacy is installed, in order to load and manipulate the pre-processed text data (spacy https://spacy.io/docs/api/doc).
+If you are using a newer version of spacy and don't want to downgrade, it is recommended that you use a virtual environment, i.e. run the following in the root redditnetwork directory
+  pip install virtualenv
+  python -m virtualenv venv
+  source venv/bin/activate
+
+After you have (optionally) set-up the virtual environment, run
+  pip install -I -r requirements.txt
+  python -m spacy.en.download all
+The first command installs the necessary dependencies (the -I flag makes sure that the correct versions are installed). 
+The second command downloads the spacy model data. It will download around 1Gb data (including pre-trained word vectors) into the spacy installation directory, so make sure you have space in that directory.
+ 
 
 ## Using the code
 

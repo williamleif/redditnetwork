@@ -10,8 +10,8 @@ def extract_week_network(subreddit, year, week):
     """
 
     graph = nx.DiGraph(user_feats={},
-            post_feats = {"score" : 1, "time": 1, "word_vec" : 300},
-            comment_feats = {"score" : 1, "time" : 1, "time_offset": 1, "length" : 1, "word_vec" : 300})
+            post_feats = {"score" : 1, "time": 1, "length": 1, "word_vec" : 300},
+            comment_feats = {"score" : 1, "time" : 1, "post_time_offset": 1, "length" : 1, "word_vec" : 300})
     post_map = PostMap(subreddit, year, -1, week=week)
     comment_iter = WeekIterWrapper(SpacyComments, week, subreddit, year)
     week_base_time = get_week_timestamp(year, week)
@@ -22,7 +22,8 @@ def extract_week_network(subreddit, year, week):
                 type="post",
                 score=post["score"],
                 time=(int(post["timestamp"])-week_base_time)/3600.,
-                word_vecs = post["doc"].vector)
+                word_vecs = post["doc"].vector,
+                length=len(post["doc"]))
         if not graph.has_node(post["author"]):
             graph.add_node(post["author"], type="user")
         graph.add_edge(post["author"], post["id"], type="user_post")
@@ -48,7 +49,7 @@ def extract_week_network(subreddit, year, week):
                 type="comment",
                 score=comment["score"],
                 time=(comment["timestamp"]-week_base_time)/3600.,
-                time_offset=(comment["timestamp"]-int(post["timestamp"]))/3600.,
+                post_time_offset=(comment["timestamp"]-int(post["timestamp"]))/3600.,
                 length=len(comment["doc"]),
                 word_vecs=comment["doc"].vector)
 
