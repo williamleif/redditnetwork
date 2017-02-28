@@ -11,9 +11,10 @@ If you are using a newer version of spacy and don't want to downgrade, it is rec
   source venv/bin/activate
 
 After you have (optionally) set-up the virtual environment, run
-  pip setup.py install
-  python -m spacy.en.download all
-  python -m nltk.downloader stopwords
+
+    pip setup.py install
+    python -m spacy.en.download all
+    python -m nltk.downloader stopwords
 The first command installs the package and all necessary dependencies (the -I flag makes sure that the correct versions are installed). 
 The second command downloads the spacy model data. It will download around 1Gb data (including pre-trained word vectors) into the spacy installation directory, so make sure you have space in that directory.
 The third model downloads the standard nltk stopword lists; this should only take a few seconds.
