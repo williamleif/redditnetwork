@@ -6,9 +6,10 @@ Code for managing Reddit dataset (assuming user has access to the Stanford Reddi
 
 The code requires that version 1.2.0 of spacy is installed, in order to load and manipulate the pre-processed text data (spacy https://spacy.io/docs/api/doc).
 If you are using a newer version of spacy and don't want to downgrade, it is recommended that you use a virtual environment, i.e. run the following in the root redditnetwork directory
-  pip install virtualenv
-  python -m virtualenv venv
-  source venv/bin/activate
+
+    pip install virtualenv
+    python -m virtualenv venv
+    source venv/bin/activate
 
 After you have (optionally) set-up the virtual environment, run
 
