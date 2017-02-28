@@ -15,6 +15,15 @@ from spacy.en import English
 SPACY_VOCAB = English().vocab
 FILTERED_USERS = read_filtered_users()
 
+class MultiIterWrapper():
+    def __init__(self, iters):
+        self.iters = iters
+
+    def __iter__(self):
+        for _iter in self.iters:
+            for item in _iter:
+                yield item
+
 class WeekIterWrapper():
     """
     Gets an iterator over a specific week.

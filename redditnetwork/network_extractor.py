@@ -1,7 +1,44 @@
 import networkx as nx
-from redditnetwork.corpus_reader import PostMap, WeekIterWrapper, SpacyComments
+from redditnetwork.corpus_reader import PostMap, WeekIterWrapper, SpacyComments, MultiIterWrapper
 from redditnetwork.utils.dateutils import get_week_timestamp
 
+def extract_month_network_multisubreddits(subreddits, year, month):
+    """
+    Extracts a multilayer network of users comments and posts for
+    multiple subreddits from the specified month.
+    """
+    post_map = {}
+    for subreddit in subreddits:
+        post_map.update(PostMap(subreddit, year, month).post_map)
+    comment_iter = MultiIterWrapper([SpacyComments(subreddit, year, month) for
+        subreddit in subreddits])
+    return extract_network(post_map, comment_iter, 0)
+
+
+def extract_week_network_multisubreddits(subreddits, year, week):
+    """
+    Extracts a multilayer network of users comments and posts for
+    multiple subreddits from the specified week.
+    """
+    post_map = {}
+    for subreddit in subreddits:
+        post_map.update(PostMap(subreddit, year, -1, week=week).post_map)
+    comment_iter = MultiIterWrapper([WeekIterWrapper(SpacyComments, week, subreddit, year) for
+        subreddit in subreddits])
+    return extract_network(post_map, comment_iter, 0)
+
+
+def extract_month_network(subreddit, year, month):
+    """
+    Extracts a multi-layer network of users, comments, and posts.
+    Data is taken from a specific month (num between 1 and 12) in a specific year.
+    """
+    post_map = PostMap(subreddit, year, month)
+    comment_iter = SpacyComments(subreddit, year, month)
+    #TODO: Actually do this... It is not a big deal since the values
+    # will be internally consistent, but still...
+    month_base_time = 0
+    return extract_network(post_map.post_map, comment_iter, month_base_time)
 
 def extract_week_network(subreddit, year, week):
     """
@@ -9,19 +46,23 @@ def extract_week_network(subreddit, year, week):
     Data is taken from a specific week (num between 1 and 50) in a specific year.
     """
 
-    graph = nx.DiGraph(user_feats={},
-            post_feats = {"score" : 1, "time": 1, "length": 1, "word_vec" : 300},
-            comment_feats = {"score" : 1, "time" : 1, "post_time_offset": 1, "length" : 1, "word_vec" : 300})
     post_map = PostMap(subreddit, year, -1, week=week)
     comment_iter = WeekIterWrapper(SpacyComments, week, subreddit, year)
     week_base_time = get_week_timestamp(year, week)
 
+    return extract_network(post_map.post_map, comment_iter, week_base_time)
+
+def extract_network(post_map, comment_iter, base_time):
+    graph = nx.DiGraph(user_feats={},
+            post_feats = {"score" : 1, "time": 1, "length": 1, "word_vec" : 300},
+            comment_feats = {"score" : 1, "time" : 1, "post_time_offset": 1, "length" : 1, "word_vec" : 300})
+
     ## Add all posts as nodes connected to their authors
-    for post in post_map.post_map.values():
+    for post in post_map.values():
         graph.add_node(post["id"], 
                 type="post",
                 score=post["score"],
-                time=(int(post["timestamp"])-week_base_time)/3600.,
+                time=(int(post["timestamp"])-base_time)/3600.,
                 word_vecs = post["doc"].vector,
                 length=len(post["doc"]))
         if not graph.has_node(post["author"]):
@@ -48,7 +89,7 @@ def extract_week_network(subreddit, year, week):
         graph.add_node(comment["id"],
                 type="comment",
                 score=comment["score"],
-                time=(comment["timestamp"]-week_base_time)/3600.,
+                time=(comment["timestamp"]-base_time)/3600.,
                 post_time_offset=(comment["timestamp"]-int(post["timestamp"]))/3600.,
                 length=len(comment["doc"]),
                 word_vecs=comment["doc"].vector)
