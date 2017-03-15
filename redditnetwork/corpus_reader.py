@@ -194,6 +194,7 @@ class SpacyComments():
         self.clean_bots = clean_bots
         self.clean_deleted = clean_deleted
         self.include_punct = include_punct
+        self.subreddit = subreddit
 
     def _spacy_string_clean(self, token):
         if token.like_url:
@@ -215,6 +216,7 @@ class SpacyComments():
                 "author" : info[2],
                 "score" : int(info[3]),
                 "parent" : info[4], 
+                "subreddit" : self.subreddit, 
                 "post" : info[5].strip()}
         return comment_info
 

@@ -54,14 +54,15 @@ def extract_week_network(subreddit, year, week):
 
 def extract_network(post_map, comment_iter, base_time):
     graph = nx.DiGraph(user_feats={},
-            post_feats = {"score" : 1, "time": 1, "length": 1, "word_vec" : 300},
-            comment_feats = {"score" : 1, "time" : 1, "post_time_offset": 1, "length" : 1, "word_vec" : 300})
+            post_feats = {"score" : 1, "time": 1, "length": 1, "subreddit" : 1, "word_vec" : 300},
+            comment_feats = {"score" : 1, "time" : 1, "post_time_offset": 1, "length" : 1, "subreddit" : 1, "word_vec" : 300})
 
     ## Add all posts as nodes connected to their authors
     for post in post_map.values():
         graph.add_node(post["id"], 
                 type="post",
                 score=post["score"],
+                subreddit=post["subreddit"],
                 time=(int(post["timestamp"])-base_time)/3600.,
                 word_vecs = post["doc"].vector,
                 length=len(post["doc"]))
@@ -89,6 +90,7 @@ def extract_network(post_map, comment_iter, base_time):
         graph.add_node(comment["id"],
                 type="comment",
                 score=comment["score"],
+                subreddit=comment["subreddit"],
                 time=(comment["timestamp"]-base_time)/3600.,
                 post_time_offset=(comment["timestamp"]-int(post["timestamp"]))/3600.,
                 length=len(comment["doc"]),
