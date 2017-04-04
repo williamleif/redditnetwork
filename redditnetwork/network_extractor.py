@@ -6,6 +6,9 @@ from collections import Counter, defaultdict
 from redditnetwork.corpus_reader import PostMap, WeekIterWrapper, SpacyComments, MultiIterWrapper
 from redditnetwork.utils.dateutils import get_week_timestamp
 
+VEC_SIZE=300
+SIF=10e-4
+
 def extract_month_network_multisubreddits(subreddits, year, month):
     """
     Extracts a multilayer network of users comments and posts for
@@ -68,23 +71,31 @@ def extract_week_network(subreddit, year, week):
 
     return extract_network(post_map.post_map, comment_iter, week_base_time)
 
-def _get_embedding(doc, counter):
-    vecs = np.array([word.vector()*counter[word] for word in doc if word.has_vector()])
-    return np.mean(vecs, axis=0)
+def _get_embedding(doc, counter, total_count):
+    vecs = [word.vector*(SIF / (counter[word.lower_]/total_count + SIF)) for word in doc if word.has_vector]
+    if len(vecs) == 0 or np.isnan(np.sum(np.array(vecs))):
+        return np.zeros((VEC_SIZE,))
+    else:
+        vecs = np.array(vecs)
+        vecs = np.mean(vecs, axis=0)
+        return vecs
 
 def extract_network(post_map, comment_iter, base_time, idf=True):
 
     if idf:
         df = Counter()
+        total_count = 0.
         for comment in comment_iter:
             for word in comment["doc"]:
                 df[word.lower_] += 1
+                total_count += 1.
     else:
-        df = defaultdict(lambda : 1.)
+        df = defaultdict(float)
+        total_count = 1.
 
     graph = nx.DiGraph(user_feats={},
-            post_feats = {"score" : 1, "time": 1, "num_comments": 1, "subreddit" : 1, "length" : 1, "word_vecs" : 300},
-            comment_feats = {"score" : 1, "time" : 1, "post_time_offset": 1, "length" : 1, "subreddit" : 1, "word_vecs" : 300})
+            post_feats = {"score" : 1, "time": 1, "num_comments": 1, "subreddit" : 1, "length" : 1, "word_vecs" : VEC_SIZE},
+            comment_feats = {"score" : 1, "time" : 1, "post_time_offset": 1, "length" : 1, "subreddit" : 1, "word_vecs" : VEC_SIZE})
 
     ## Add all posts as nodes connected to their authors
     for post in post_map.values():
@@ -95,7 +106,7 @@ def extract_network(post_map, comment_iter, base_time, idf=True):
                 subreddit=post["subreddit"],
                 time=(int(post["timestamp"])-base_time)/3600.,
                 length=len(post["doc"]),
-                word_vecs=_get_embedding(post["doc"], df))
+                word_vecs=_get_embedding(post["doc"], df, total_count))
         if not graph.has_node(post["author"]):
             graph.add_node(post["author"], type="user")
         graph.add_edge(post["author"], post["id"], type="user_post")
@@ -124,7 +135,7 @@ def extract_network(post_map, comment_iter, base_time, idf=True):
                 time=(comment["timestamp"]-base_time)/3600.,
                 post_time_offset=(comment["timestamp"]-int(post["timestamp"]))/3600.,
                 length=len(comment["doc"]),
-                word_vecs=_get_embedding(comment["doc"], df))
+                word_vecs=_get_embedding(comment["doc"], df, total_count))
 
         # Add edges
         graph.add_edge(comment["author"], comment["id"], type="user_comment")
