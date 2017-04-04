@@ -1,4 +1,8 @@
 import networkx as nx
+import numpy as np
+
+from collections import Counter, defaultdict
+
 from redditnetwork.corpus_reader import PostMap, WeekIterWrapper, SpacyComments, MultiIterWrapper
 from redditnetwork.utils.dateutils import get_week_timestamp
 
@@ -27,6 +31,19 @@ def extract_week_network_multisubreddits(subreddits, year, week):
         subreddit in subreddits])
     return extract_network(post_map, comment_iter, 0)
 
+def extract_year_network(subreddit, year):
+    """
+    Extracts a multi-layer network of users, comments, and posts.
+    Data is taken from a specific month (num between 1 and 12) in a specific year.
+    """
+    post_map = {}
+    for month in range(1,13):
+        post_map.update(PostMap(subreddit, year, month).post_map)
+    comment_iter = MultiIterWrapper([SpacyComments(subreddit, year, month) for
+        month in range(1,13)])
+    base_time = get_week_timestamp(year,0)
+    return extract_network(post_map, comment_iter, base_time)
+
 
 def extract_month_network(subreddit, year, month):
     """
@@ -37,7 +54,7 @@ def extract_month_network(subreddit, year, month):
     comment_iter = SpacyComments(subreddit, year, month)
     #TODO: Actually do this... It is not a big deal since the values
     # will be internally consistent, but still...
-    month_base_time = 0
+    month_base_time = get_week_timestamp(year, month/4-2)
     return extract_network(post_map.post_map, comment_iter, month_base_time)
 
 def extract_week_network(subreddit, year, week):
@@ -45,27 +62,40 @@ def extract_week_network(subreddit, year, week):
     Extracts a multi-layer network of users, comments, and posts.
     Data is taken from a specific week (num between 1 and 50) in a specific year.
     """
-
     post_map = PostMap(subreddit, year, -1, week=week)
     comment_iter = WeekIterWrapper(SpacyComments, week, subreddit, year)
     week_base_time = get_week_timestamp(year, week)
 
     return extract_network(post_map.post_map, comment_iter, week_base_time)
 
-def extract_network(post_map, comment_iter, base_time):
+def _get_embedding(doc, counter):
+    vecs = np.array([word.vector()*counter[word] for word in doc if word.has_vector()])
+    return np.mean(vecs, axis=0)
+
+def extract_network(post_map, comment_iter, base_time, idf=True):
+
+    if idf:
+        df = Counter()
+        for comment in comment_iter:
+            for word in comment["doc"]:
+                df[word.lower_] += 1
+    else:
+        df = defaultdict(lambda : 1.)
+
     graph = nx.DiGraph(user_feats={},
-            post_feats = {"score" : 1, "time": 1, "length": 1, "subreddit" : 1, "word_vec" : 300},
-            comment_feats = {"score" : 1, "time" : 1, "post_time_offset": 1, "length" : 1, "subreddit" : 1, "word_vec" : 300})
+            post_feats = {"score" : 1, "time": 1, "num_comments": 1, "subreddit" : 1, "length" : 1, "word_vecs" : 300},
+            comment_feats = {"score" : 1, "time" : 1, "post_time_offset": 1, "length" : 1, "subreddit" : 1, "word_vecs" : 300})
 
     ## Add all posts as nodes connected to their authors
     for post in post_map.values():
         graph.add_node(post["id"], 
                 type="post",
                 score=post["score"],
+                num_comments=post["num_comments"],
                 subreddit=post["subreddit"],
                 time=(int(post["timestamp"])-base_time)/3600.,
-                word_vecs = post["doc"].vector,
-                length=len(post["doc"]))
+                length=len(post["doc"]),
+                word_vecs=_get_embedding(post["doc"], df))
         if not graph.has_node(post["author"]):
             graph.add_node(post["author"], type="user")
         graph.add_edge(post["author"], post["id"], type="user_post")
@@ -94,7 +124,7 @@ def extract_network(post_map, comment_iter, base_time):
                 time=(comment["timestamp"]-base_time)/3600.,
                 post_time_offset=(comment["timestamp"]-int(post["timestamp"]))/3600.,
                 length=len(comment["doc"]),
-                word_vecs=comment["doc"].vector)
+                word_vecs=_get_embedding(comment["doc"], df))
 
         # Add edges
         graph.add_edge(comment["author"], comment["id"], type="user_comment")
