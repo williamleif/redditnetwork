@@ -95,9 +95,11 @@ class PostIterator():
         self._len = None
         self.clean_bots = clean_bots
         self.clean_deleted = clean_deleted
+        self.subreddit = subreddit
 
     def _parse_info(self, line):
         info = json.loads(line)
+        info["subreddit"] = self.subreddit
         return info
 
     def __len__(self):
